@@ -19,6 +19,7 @@ use MageSec\Detector;
 use MageSec\GitHubClient;
 use MageSec\IssueManager;
 use MageSec\Matcher;
+use MageSec\OsvClient;
 use MageSec\PrManager;
 use MageSec\RegistryLoader;
 use MageSec\Remediator;
@@ -54,6 +55,8 @@ try {
     $inputs = [
         'composer_path' => trim((string) (getenv('INPUT_COMPOSER_PATH') ?: '.'), '/'),
         'severity_threshold' => strtolower((string) (getenv('INPUT_SEVERITY_THRESHOLD') ?: 'low')),
+        'use_osv' => inputBool('INPUT_USE_OSV', true),
+        'osv_api_url' => (string) (getenv('INPUT_OSV_API_URL') ?: 'https://api.osv.dev/v1'),
         'registry_repository' => (string) (getenv('INPUT_REGISTRY_REPOSITORY') ?: ''),
         'registry_ref' => (string) (getenv('INPUT_REGISTRY_REF') ?: ''),
         'github_token' => (string) (getenv('INPUT_GITHUB_TOKEN') ?: getenv('GITHUB_TOKEN') ?: ''),
@@ -70,6 +73,16 @@ try {
     $project = $detector->detect($workspace, $inputs['composer_path']);
 
     $client = new GitHubClient($inputs['github_token']);
+    $osvFindings = [];
+    if ($inputs['use_osv']) {
+        try {
+            $osvClient = new OsvClient($inputs['osv_api_url']);
+            $osvFindings = $osvClient->queryProject($project);
+        } catch (Throwable $exception) {
+            fwrite(STDERR, '[MageSec] OSV baseline unavailable: ' . $exception->getMessage() . PHP_EOL);
+        }
+    }
+
     $registryLoader = new RegistryLoader($client);
     $registry = $registryLoader->load(
         $actionPath,
@@ -78,7 +91,7 @@ try {
     );
 
     $matcher = new Matcher();
-    $matches = $matcher->match($project, $registry, $state, $inputs['severity_threshold']);
+    $matches = $matcher->match($project, $osvFindings, $registry, $state, $inputs['severity_threshold']);
 
     $sarifGenerator = new SarifGenerator();
     $sarif = $sarifGenerator->generate($project, $matches, 'MageSec');

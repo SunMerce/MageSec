@@ -9,6 +9,14 @@ inputs:
     description: Minimum severity to include in SARIF and the action summary.
     required: false
     default: low
+  use_osv:
+    description: Query OSV for baseline Composer vulnerability data before applying MageSec overlays.
+    required: false
+    default: "true"
+  osv_api_url:
+    description: Base OSV API URL.
+    required: false
+    default: https://api.osv.dev/v1
   registry_repository:
     description: Optional owner/repo that contains registry YAML files.
     required: false

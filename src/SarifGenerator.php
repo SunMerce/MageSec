@@ -65,10 +65,12 @@ final class SarifGenerator
 
     private function resultMessage(array $project, array $match): string
     {
+        $packageName = (string) ($match['package_name'] ?? $project['edition_package']);
+        $packageVersion = (string) ($match['package_version'] ?? $project['version']);
         $base = sprintf(
             '%s %s is affected by %s (%s).',
-            $project['edition_package'],
-            $project['version'],
+            $packageName,
+            $packageVersion,
             $match['title'],
             $match['cve']
         );
