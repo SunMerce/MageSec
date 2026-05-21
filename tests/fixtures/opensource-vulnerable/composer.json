@@ -1,0 +1,10 @@
+{
+    "name": "fixture/magento-store",
+    "type": "project",
+    "require": {
+        "magento/product-community-edition": "2.4.6-p5"
+    },
+    "extra": {
+        "patches": {}
+    }
+}

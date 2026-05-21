@@ -1,0 +1,56 @@
+name: MageSec
+description: Scan Magento composer manifests against a curated vulnerability registry and emit SARIF plus remediation artifacts.
+inputs:
+  composer_path:
+    description: Path from the repository root to the Magento composer files.
+    required: false
+    default: .
+  severity_threshold:
+    description: Minimum severity to include in SARIF and the action summary.
+    required: false
+    default: low
+  registry_repository:
+    description: Optional owner/repo that contains registry YAML files.
+    required: false
+    default: ""
+  registry_ref:
+    description: Branch, tag, or SHA to fetch from registry_repository. When empty, use the bundled registry.
+    required: false
+    default: ""
+  github_token:
+    description: GitHub token for remote registry fetches and optional pull request creation.
+    required: false
+    default: ""
+  auto_remediate:
+    description: Write remediation changes into the checked out repository.
+    required: false
+    default: "false"
+  auto_pr:
+    description: Create or update an aggregate pull request after remediation changes are written.
+    required: false
+    default: "false"
+  auto_issue:
+    description: Create or update an aggregate security status issue in the repository.
+    required: false
+    default: "false"
+  write_summary:
+    description: Write a human-readable summary to the workflow job.
+    required: false
+    default: "true"
+outputs:
+  sarif_file:
+    description: Relative path to the generated SARIF file.
+  vulnerabilities_found:
+    description: Number of matched vulnerabilities at or above the configured threshold.
+  remediations_planned:
+    description: Number of matched vulnerabilities with a supported remediation.
+  pull_requests_created:
+    description: Number of pull requests created by this run.
+  status_issue_url:
+    description: URL of the created or updated status issue.
+runs:
+  using: docker
+  image: Dockerfile
+branding:
+  color: red
+  icon: shield

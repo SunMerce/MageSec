@@ -1,0 +1,63 @@
+{
+    "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
+    "version": "2.1.0",
+    "runs": [
+        {
+            "tool": {
+                "driver": {
+                    "name": "MageSec",
+                    "informationUri": "https://github.com/magesec/magesec",
+                    "rules": [
+                        {
+                            "id": "CVE-2024-34102",
+                            "name": "CosmicSting - Unauthenticated XXE to RCE",
+                            "shortDescription": {
+                                "text": "CosmicSting - Unauthenticated XXE to RCE"
+                            },
+                            "fullDescription": {
+                                "text": "A critical XML external entity vulnerability in Magento Open Source and Adobe Commerce. An unauthenticated attacker can read arbitrary files, extract the encryption key, and use that access to take over the storefront and administrative APIs."
+                            },
+                            "help": {
+                                "text": "A critical XML external entity vulnerability in Magento Open Source and Adobe Commerce. An unauthenticated attacker can read arbitrary files, extract the encryption key, and use that access to take over the storefront and administrative APIs.\n- Unauthenticated attackers can retrieve sensitive files from the application host.\n- Exposure of the encryption key can lead to administrative takeover and malicious content injection.\n- The issue was actively exploited in the wild shortly after disclosure.\nAdobe Security Bulletin APSB24-40: https://helpx.adobe.com/security/products/magento/apsb24-40.html\nNVD Entry: https://nvd.nist.gov/vuln/detail/CVE-2024-34102",
+                                "markdown": "A critical XML external entity vulnerability in Magento Open Source and Adobe Commerce. An unauthenticated attacker can read arbitrary files, extract the encryption key, and use that access to take over the storefront and administrative APIs.\n\nImpact:\n- Unauthenticated attackers can retrieve sensitive files from the application host.\n- Exposure of the encryption key can lead to administrative takeover and malicious content injection.\n- The issue was actively exploited in the wild shortly after disclosure.\n\nReferences:\n- [Adobe Security Bulletin APSB24-40](https://helpx.adobe.com/security/products/magento/apsb24-40.html)\n- [NVD Entry](https://nvd.nist.gov/vuln/detail/CVE-2024-34102)"
+                            },
+                            "helpUri": "https://helpx.adobe.com/security/products/magento/apsb24-40.html",
+                            "properties": {
+                                "security-severity": "9.8",
+                                "tags": [
+                                    "security",
+                                    "magento",
+                                    "dependency"
+                                ]
+                            }
+                        }
+                    ]
+                }
+            },
+            "results": [
+                {
+                    "ruleId": "CVE-2024-34102",
+                    "level": "error",
+                    "message": {
+                        "text": "magento/product-community-edition 2.4.6-p5 is affected by CosmicSting - Unauthenticated XXE to RCE (CVE-2024-34102). Upgrade to the first Adobe release that contains the official CosmicSting fix."
+                    },
+                    "locations": [
+                        {
+                            "physicalLocation": {
+                                "artifactLocation": {
+                                    "uri": "composer.lock"
+                                },
+                                "region": {
+                                    "startLine": 1
+                                }
+                            }
+                        }
+                    ],
+                    "partialFingerprints": {
+                        "primaryLocationLineHash": "ff93883eb3be7e00f572a1ee9eb6c31dc6e083b9"
+                    }
+                }
+            ]
+        }
+    ]
+}
