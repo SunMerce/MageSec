@@ -56,3 +56,6 @@ outputs:
     description: Number of matched vulnerabilities at or above the configured threshold.
   pr_url:
     description: URL of the remediation pull request, when auto_pr opened or reused one.
+runs:
+  using: docker
+  image: Dockerfile
