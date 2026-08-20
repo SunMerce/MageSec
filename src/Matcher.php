@@ -46,7 +46,7 @@ final class Matcher
                 'impact' => is_array($finding['impact'] ?? null) ? $finding['impact'] : [],
                 'references' => is_array($finding['references'] ?? null) ? $finding['references'] : [],
                 'matched_constraint' => null,
-                'selected_remediation' => null,
+                'selected_remediation' => is_array($finding['selected_remediation'] ?? null) ? $finding['selected_remediation'] : null,
                 'source_file' => '',
                 'source' => 'osv',
                 'report_mode' => 'standalone',

@@ -102,6 +102,10 @@ final class OsvClient
         $summary = trim((string) ($vulnerability['summary'] ?? ''));
         $details = trim((string) ($vulnerability['details'] ?? ''));
 
+        $packageName = (string) ($package['name'] ?? '');
+        $packageVersion = (string) ($package['version'] ?? '');
+        $fixedVersion = $this->fixedVersion($vulnerability, $packageName, $packageVersion);
+
         return [
             'id' => (string) ($vulnerability['id'] ?? $cve),
             'aliases' => $aliases,
@@ -113,13 +117,81 @@ final class OsvClient
             'impact' => [],
             'references' => $this->references($vulnerability['references'] ?? []),
             'matched_constraint' => null,
-            'selected_remediation' => null,
+            'selected_remediation' => $fixedVersion === null ? null : [
+                'phase' => 'official',
+                'type' => 'composer-update',
+                'condition' => 'always',
+                'description' => sprintf('Upgrade %s to the first fixed release reported by OSV.', $packageName),
+                'packages' => [$packageName => $fixedVersion],
+            ],
             'source' => 'osv',
             'report_mode' => 'standalone',
             'source_file' => '',
-            'package_name' => (string) ($package['name'] ?? ''),
-            'package_version' => (string) ($package['version'] ?? ''),
+            'package_name' => $packageName,
+            'package_version' => $packageVersion,
         ];
+    }
+
+    /**
+     * Find the lowest fixed version for the queried package from OSV affected ranges.
+     */
+    private function fixedVersion(array $vulnerability, string $packageName, string $packageVersion): ?string
+    {
+        if ($packageName === '' || $packageVersion === '') {
+            return null;
+        }
+
+        $candidates = [];
+        foreach (($vulnerability['affected'] ?? []) as $affected) {
+            if (!is_array($affected)) {
+                continue;
+            }
+
+            $affectedName = (string) ($affected['package']['name'] ?? '');
+            if ($affectedName !== '' && strcasecmp($affectedName, $packageName) !== 0) {
+                continue;
+            }
+
+            foreach (($affected['ranges'] ?? []) as $range) {
+                if (!is_array($range)) {
+                    continue;
+                }
+
+                $introduced = null;
+                foreach (($range['events'] ?? []) as $event) {
+                    if (!is_array($event)) {
+                        continue;
+                    }
+
+                    if (isset($event['introduced'])) {
+                        $introduced = (string) $event['introduced'];
+                        continue;
+                    }
+
+                    if (!isset($event['fixed']) || $introduced === null) {
+                        continue;
+                    }
+
+                    $fixed = (string) $event['fixed'];
+                    $introducedVersion = $introduced === '0' ? '0' : $introduced;
+                    if (Version::compare($packageVersion, $introducedVersion) >= 0
+                        && Version::compare($packageVersion, $fixed) < 0
+                    ) {
+                        $candidates[] = $fixed;
+                    }
+
+                    $introduced = null;
+                }
+            }
+        }
+
+        if ($candidates === []) {
+            return null;
+        }
+
+        usort($candidates, static fn (string $left, string $right): int => Version::compare($left, $right));
+
+        return $candidates[0];
     }
 
     private function references(mixed $references): array

@@ -142,6 +142,55 @@ $tests = [
         assertSame('vendor/package', $findings[0]['package_name'], 'OSV client should keep the affected package name.');
         assertSame('high', $findings[0]['severity'], 'OSV client should normalize severity labels to lowercase.');
     },
+    'osv_client_synthesizes_remediation_from_fixed_version' => static function (): void {
+        $client = new OsvClient('https://example.test/v1', static function (string $method, string $url, ?array $payload): array {
+            if ($method === 'POST') {
+                return [
+                    'results' => [[
+                        'vulns' => [['id' => 'GHSA-fix-0001']],
+                    ]],
+                ];
+            }
+
+            return [
+                'id' => 'GHSA-fix-0001',
+                'summary' => 'Fixable advisory',
+                'database_specific' => ['severity' => 'HIGH'],
+                'affected' => [[
+                    'package' => ['name' => 'vendor/package', 'ecosystem' => 'Packagist'],
+                    'ranges' => [[
+                        'type' => 'ECOSYSTEM',
+                        'events' => [
+                            ['introduced' => '1.0.0'],
+                            ['fixed' => '1.2.8'],
+                            ['introduced' => '1.3.0'],
+                            ['fixed' => '1.3.1'],
+                        ],
+                    ]],
+                ]],
+            ];
+        });
+
+        $findings = $client->queryProject([
+            'installed_packages' => ['vendor/package' => '1.2.3'],
+        ]);
+
+        assertSame(1, count($findings), 'OSV client should return the mocked finding.');
+        $remediation = $findings[0]['selected_remediation'];
+        assertSame('composer-update', $remediation['type'] ?? null, 'OSV finding should carry a synthesized composer-update remediation.');
+        assertSame('1.2.8', $remediation['packages']['vendor/package'] ?? null, 'Remediation should target the lowest fixed version above the installed one.');
+
+        $matcher = new Matcher();
+        $matches = $matcher->match(
+            ['edition_package' => 'vendor/package', 'version' => '1.2.3'],
+            $findings,
+            [],
+            ['vulnerabilities' => []],
+            'low'
+        );
+
+        assertSame('1.2.8', $matches[0]['selected_remediation']['packages']['vendor/package'] ?? null, 'Matcher should pass the OSV remediation through to the match.');
+    },
     'matcher_merges_osv_findings_with_registry_overlay' => static function (): void {
         $project = [
             'edition_package' => 'magento/product-community-edition',
