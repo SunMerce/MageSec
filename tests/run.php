@@ -8,6 +8,7 @@ use MageSec\Detector;
 use MageSec\GitHubClient;
 use MageSec\Matcher;
 use MageSec\OsvClient;
+use MageSec\RemediationPlanner;
 use MageSec\SarifGenerator;
 use MageSec\Version;
 
@@ -272,6 +273,110 @@ $tests = [
         ]], 'MageSec');
 
         assertTrue(str_contains($sarif['runs'][0]['results'][0]['message']['text'], 'vendor/package 1.2.3 is affected'), 'SARIF output should use the matched package coordinates when available.');
+    },
+    'remediation_planner_resolves_targeted_packages' => static function (): void {
+        $project = [
+            'edition_package' => 'magento/product-community-edition',
+            'version' => '2.4.6-p5',
+            'installed_packages' => ['magento/product-community-edition' => '2.4.6-p5'],
+            'requirements' => ['magento/product-community-edition' => '2.4.6-p5'],
+        ];
+        $matches = [[
+            'id' => 'cosmicsting',
+            'cve' => 'CVE-2024-34102',
+            'title' => 'CosmicSting',
+            'severity' => 'critical',
+            'selected_remediation' => [
+                'phase' => 'official',
+                'type' => 'composer-update',
+                'targets' => [
+                    [
+                        'when' => ['magento/product-community-edition' => '>=2.4.6 <2.4.7'],
+                        'packages' => ['magento/product-community-edition' => '2.4.6-p6'],
+                    ],
+                    [
+                        'when' => ['magento/product-community-edition' => '>=2.4.7 <2.4.8'],
+                        'packages' => ['magento/product-community-edition' => '2.4.7-p1'],
+                    ],
+                ],
+            ],
+        ]];
+
+        $planner = new RemediationPlanner();
+        $plan = $planner->plan($project, $matches);
+
+        assertSame(1, count($plan['updates']), 'Planner should produce one update for the matching target branch.');
+        assertSame('2.4.6-p6', $plan['updates'][0]['target'], 'Planner should pick the 2.4.6 patch target for a 2.4.6 install.');
+        assertSame(1, count($plan['advisories']), 'Planner should record the advisory behind the update.');
+    },
+    'remediation_planner_applies_updates_to_manifest' => static function (): void {
+        $composerJson = [
+            'name' => 'fixture/store',
+            'require' => ['magento/product-community-edition' => '2.4.6-p5'],
+        ];
+        $plan = [
+            'updates' => [[
+                'package' => 'magento/product-community-edition',
+                'current' => '2.4.6-p5',
+                'target' => '2.4.6-p6',
+            ]],
+            'advisories' => [],
+        ];
+
+        $planner = new RemediationPlanner();
+        $applied = $planner->applyToManifest($composerJson, $plan);
+
+        assertSame(1, count($applied), 'Planner should apply the update to the require section.');
+        assertSame('2.4.6-p6', $composerJson['require']['magento/product-community-edition'], 'composer.json should pin the patched version.');
+    },
+    'remediation_planner_converges_on_highest_target' => static function (): void {
+        $project = [
+            'installed_packages' => ['magento/product-community-edition' => '2.4.6-p5'],
+            'requirements' => [],
+        ];
+        $makeMatch = static function (string $id, string $target): array {
+            return [
+                'id' => $id,
+                'cve' => $id,
+                'title' => $id,
+                'severity' => 'high',
+                'selected_remediation' => [
+                    'phase' => 'official',
+                    'type' => 'composer-update',
+                    'packages' => ['magento/product-community-edition' => $target],
+                ],
+            ];
+        };
+
+        $planner = new RemediationPlanner();
+        $plan = $planner->plan($project, [
+            $makeMatch('CVE-1', '2.4.6-p6'),
+            $makeMatch('CVE-2', '2.4.6-p8'),
+        ]);
+
+        assertSame(1, count($plan['updates']), 'Overlapping updates should converge to a single package update.');
+        assertSame('2.4.6-p8', $plan['updates'][0]['target'], 'Planner should keep the highest target version.');
+    },
+    'remediation_planner_ignores_non_composer_remediations' => static function (): void {
+        $project = [
+            'installed_packages' => ['magento/product-community-edition' => '2.4.6-p5'],
+            'requirements' => [],
+        ];
+        $matches = [[
+            'id' => 'day-zero',
+            'cve' => 'day-zero',
+            'title' => 'Day zero',
+            'severity' => 'critical',
+            'selected_remediation' => [
+                'phase' => 'interim',
+                'type' => 'patch',
+            ],
+        ]];
+
+        $planner = new RemediationPlanner();
+        $plan = $planner->plan($project, $matches);
+
+        assertSame([], $plan['updates'], 'Patch-type remediations should not produce composer updates.');
     },
 ];
 

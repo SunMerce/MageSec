@@ -26,18 +26,33 @@ inputs:
     required: false
     default: ""
   github_token:
-    description: GitHub token, only needed when registry_repository points to a private repository.
+    description: GitHub token, only needed when registry_repository points to a private repository or when overriding the token used for auto_pr.
     required: false
-    default: ""
+    default: ${{ github.token }}
   write_summary:
     description: Write a human-readable summary to the workflow job.
     required: false
     default: "true"
+  auto_remediate:
+    description: Apply available composer-update remediations to composer.json (and composer.lock when composer is available) in the workspace.
+    required: false
+    default: "false"
+  auto_pr:
+    description: Push the remediations to a magesec/* branch and open a pull request labelled with pr_label. Implies auto_remediate. Requires a token with contents:write and pull-requests:write.
+    required: false
+    default: "false"
+  pr_label:
+    description: Label applied to automatically opened remediation pull requests. Created automatically when missing.
+    required: false
+    default: security
+  base_branch:
+    description: Branch the remediation pull request targets. Defaults to the PR base branch or the current ref.
+    required: false
+    default: ""
 outputs:
   sarif_file:
     description: Relative path to the generated SARIF file.
   vulnerabilities_found:
     description: Number of matched vulnerabilities at or above the configured threshold.
-runs:
-  using: docker
-  image: Dockerfile
+  pr_url:
+    description: URL of the remediation pull request, when auto_pr opened or reused one.

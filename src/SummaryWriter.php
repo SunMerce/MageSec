@@ -6,7 +6,7 @@ namespace MageSec;
 
 final class SummaryWriter
 {
-    public function write(array $project, array $matches, string $sarifPath): void
+    public function write(array $project, array $matches, string $sarifPath, ?array $prResult = null): void
     {
         $summaryPath = getenv('GITHUB_STEP_SUMMARY');
         if ($summaryPath === false || $summaryPath === '') {
@@ -35,6 +35,17 @@ final class SummaryWriter
                     strtoupper($match['severity']),
                     is_array($remediation) ? sprintf(' -> %s', $remediation['type']) : ''
                 );
+            }
+        }
+
+        if ($prResult !== null) {
+            $lines[] = '';
+            $lines[] = '## Remediation Pull Request';
+            if (isset($prResult['url'])) {
+                $lines[] = sprintf('- PR: %s', $prResult['url']);
+                $lines[] = sprintf('- Branch: `%s`', $prResult['branch']);
+            } elseif (isset($prResult['skipped_reason'])) {
+                $lines[] = sprintf('- Skipped: %s', $prResult['skipped_reason']);
             }
         }
 
