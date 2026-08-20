@@ -39,3 +39,5 @@ outputs:
   vulnerabilities_found:
     description: Number of matched vulnerabilities at or above the configured threshold.
 runs:
+  using: docker
+  image: Dockerfile
