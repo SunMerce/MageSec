@@ -17,12 +17,9 @@ spl_autoload_register(static function (string $class): void {
 
 use MageSec\Detector;
 use MageSec\GitHubClient;
-use MageSec\IssueManager;
 use MageSec\Matcher;
 use MageSec\OsvClient;
-use MageSec\PrManager;
 use MageSec\RegistryLoader;
-use MageSec\Remediator;
 use MageSec\SarifGenerator;
 use MageSec\StateManager;
 use MageSec\SummaryWriter;
@@ -60,9 +57,6 @@ try {
         'registry_repository' => (string) (getenv('INPUT_REGISTRY_REPOSITORY') ?: ''),
         'registry_ref' => (string) (getenv('INPUT_REGISTRY_REF') ?: ''),
         'github_token' => (string) (getenv('INPUT_GITHUB_TOKEN') ?: getenv('GITHUB_TOKEN') ?: ''),
-        'auto_remediate' => inputBool('INPUT_AUTO_REMEDIATE', false),
-        'auto_pr' => inputBool('INPUT_AUTO_PR', false),
-        'auto_issue' => inputBool('INPUT_AUTO_ISSUE', false),
         'write_summary' => inputBool('INPUT_WRITE_SUMMARY', true),
     ];
 
@@ -100,52 +94,13 @@ try {
     $sarifPath = rtrim($workspace, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . $sarifRelativePath;
     file_put_contents($sarifPath, json_encode($sarif, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR));
 
-    $remediationResult = [
-        'planned' => [],
-        'changed_files' => [],
-        'warnings' => [],
-    ];
-
-    if ($inputs['auto_remediate'] && $matches !== []) {
-        $remediator = new Remediator($actionPath, $stateManager);
-        $remediationResult = $remediator->apply($workspace, $project, $matches, $state);
-        $state = $stateManager->load($workspace);
-    }
-
-    $prResult = [
-        'created' => 0,
-        'number' => null,
-        'url' => null,
-        'skipped_reason' => null,
-    ];
-
-    if ($inputs['auto_pr'] && $remediationResult['changed_files'] !== []) {
-        $prManager = new PrManager($client);
-        $prResult = $prManager->createOrUpdateAggregatePr($workspace, $matches, $inputs['github_token']);
-    }
-
-    $issueResult = [
-        'created' => 0,
-        'number' => null,
-        'url' => null,
-        'skipped_reason' => null,
-    ];
-
-    if ($inputs['auto_issue']) {
-        $issueManager = new IssueManager($client);
-        $issueResult = $issueManager->sync($project, $matches, $inputs['github_token']);
-    }
-
     if ($inputs['write_summary']) {
         $summaryWriter = new SummaryWriter();
-        $summaryWriter->write($project, $matches, $sarifRelativePath, $remediationResult, $prResult, $issueResult);
+        $summaryWriter->write($project, $matches, $sarifRelativePath);
     }
 
     writeOutput('sarif_file', $sarifRelativePath);
     writeOutput('vulnerabilities_found', (string) count($matches));
-    writeOutput('remediations_planned', (string) count(array_filter($matches, static fn (array $match): bool => $match['selected_remediation'] !== null)));
-    writeOutput('pull_requests_created', (string) $prResult['created']);
-    writeOutput('status_issue_url', (string) ($issueResult['url'] ?? ''));
 } catch (Throwable $exception) {
     fwrite(STDERR, '[MageSec] ' . $exception->getMessage() . PHP_EOL);
     exit(1);

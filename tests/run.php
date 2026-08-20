@@ -6,7 +6,6 @@ require __DIR__ . '/bootstrap.php';
 
 use MageSec\Detector;
 use MageSec\GitHubClient;
-use MageSec\IssueManager;
 use MageSec\Matcher;
 use MageSec\OsvClient;
 use MageSec\SarifGenerator;
@@ -273,25 +272,6 @@ $tests = [
         ]], 'MageSec');
 
         assertTrue(str_contains($sarif['runs'][0]['results'][0]['message']['text'], 'vendor/package 1.2.3 is affected'), 'SARIF output should use the matched package coordinates when available.');
-    },
-    'issue_manager_renders_status_table' => static function (): void {
-        $manager = new IssueManager(new GitHubClient(''));
-        $body = $manager->renderBody(
-            [
-                'edition' => 'opensource',
-                'edition_package' => 'magento/product-community-edition',
-                'version' => '2.4.6-p5',
-            ],
-            [[
-                'cve' => 'CVE-2024-34102',
-                'title' => 'CosmicSting',
-                'severity' => 'critical',
-                'selected_remediation' => ['type' => 'composer-update'],
-            ]]
-        );
-
-        assertTrue(str_contains($body, '<!-- magesec-status -->'), 'Issue body should contain the status marker.');
-        assertTrue(str_contains($body, '| CVE-2024-34102 | CosmicSting | CRITICAL | Official patch available |'), 'Issue body should render the vulnerability table row.');
     },
 ];
 

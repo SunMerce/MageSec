@@ -26,21 +26,9 @@ inputs:
     required: false
     default: ""
   github_token:
-    description: GitHub token for remote registry fetches and optional pull request creation.
+    description: GitHub token, only needed when registry_repository points to a private repository.
     required: false
     default: ""
-  auto_remediate:
-    description: Write remediation changes into the checked out repository.
-    required: false
-    default: "false"
-  auto_pr:
-    description: Create or update an aggregate pull request after remediation changes are written.
-    required: false
-    default: "false"
-  auto_issue:
-    description: Create or update an aggregate security status issue in the repository.
-    required: false
-    default: "false"
   write_summary:
     description: Write a human-readable summary to the workflow job.
     required: false
@@ -50,15 +38,4 @@ outputs:
     description: Relative path to the generated SARIF file.
   vulnerabilities_found:
     description: Number of matched vulnerabilities at or above the configured threshold.
-  remediations_planned:
-    description: Number of matched vulnerabilities with a supported remediation.
-  pull_requests_created:
-    description: Number of pull requests created by this run.
-  status_issue_url:
-    description: URL of the created or updated status issue.
 runs:
-  using: docker
-  image: Dockerfile
-branding:
-  color: red
-  icon: shield

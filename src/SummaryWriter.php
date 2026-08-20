@@ -6,7 +6,7 @@ namespace MageSec;
 
 final class SummaryWriter
 {
-    public function write(array $project, array $matches, string $sarifPath, array $remediationResult, array $prResult, array $issueResult): void
+    public function write(array $project, array $matches, string $sarifPath): void
     {
         $summaryPath = getenv('GITHUB_STEP_SUMMARY');
         if ($summaryPath === false || $summaryPath === '') {
@@ -36,34 +36,6 @@ final class SummaryWriter
                     is_array($remediation) ? sprintf(' -> %s', $remediation['type']) : ''
                 );
             }
-        }
-
-        if ($remediationResult['changed_files'] !== []) {
-            $lines[] = '';
-            $lines[] = '## Changed Files';
-            foreach ($remediationResult['changed_files'] as $file) {
-                $lines[] = '- ' . $file;
-            }
-        }
-
-        if (($prResult['url'] ?? null) !== null) {
-            $lines[] = '';
-            $lines[] = '## Pull Request';
-            $lines[] = sprintf('- %s', $prResult['url']);
-        } elseif (($prResult['skipped_reason'] ?? null) !== null) {
-            $lines[] = '';
-            $lines[] = '## Pull Request';
-            $lines[] = sprintf('- Skipped: %s', $prResult['skipped_reason']);
-        }
-
-        if (($issueResult['url'] ?? null) !== null) {
-            $lines[] = '';
-            $lines[] = '## Status Issue';
-            $lines[] = sprintf('- %s', $issueResult['url']);
-        } elseif (($issueResult['skipped_reason'] ?? null) !== null) {
-            $lines[] = '';
-            $lines[] = '## Status Issue';
-            $lines[] = sprintf('- Skipped: %s', $issueResult['skipped_reason']);
         }
 
         file_put_contents($summaryPath, implode("\n", $lines) . "\n", FILE_APPEND);
